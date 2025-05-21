@@ -1,0 +1,45 @@
+<div id="formClienteTecnico">
+    <h1>Gerador de Relatório</h1>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="cliente">Cliente:</label>
+            <select id="cliente" name="cliente" required>
+                <option value="">Selecione um cliente</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="tecnico">Técnico:</label>
+            <select id="tecnico" name="tecnico" required>
+                <option value="">Selecione um técnico</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="data">Data:</label>
+            <input type="date" id="data" name="data" required>
+        </div>
+        <div class="form-group">
+            <label for="local">Local:</label>
+            <input type="text" id="local" name="local" value="Rio do Sul - SC" required>
+        </div>
+    </div>
+
+    <hr>
+
+    <h2>Conteúdo do Relatório por Seção</h2>
+    <div id="reportContentContainer">
+        </div>
+    <button id="addSection">Adicionar Nova Seção Personalizada</button>
+
+    <hr>
+
+    <div class="form-actions">
+        <button id="saveReport">Salvar Relatório</button>
+        <input type="file" id="loadReportInput" accept=".json" style="display: none;">
+        <button id="loadReportButton">Carregar Relatório</button>
+        <button id="generatePdf">Gerar PDF</button>
+    </div>
+</div>

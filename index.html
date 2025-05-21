@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Relatórios H. Bremer</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Sistema H. Bremer</h1>
+            <nav>
+                <button class="nav-button" data-page="home">Início</button>
+                <button class="nav-button" data-page="new_report">Novo Relatório</button>
+                <button class="nav-button" data-page="consult_reports">Consultar Relatórios</button>
+                <button class="nav-button" data-page="register_client">Cadastrar Cliente</button>
+                <button class="nav-button" data-page="register_technician">Cadastrar Técnico</button>
+                <button class="nav-button" data-page="support">Suporte</button>
+            </nav>
+        </div>
+    </header>
+
+    <main id="app-content">
+        <section id="home-page" class="page active">
+            <h2>Bem-vindo ao Sistema de Relatórios H. Bremer!</h2>
+            <p>Selecione uma opção no menu acima para começar.</p>
+            <p>Este sistema permite gerar, salvar, carregar e consultar relatórios de inspeção, além de gerenciar cadastros de clientes e técnicos.</p>
+        </section>
+
+        <section id="new_report-page" class="page"></section>
+        <section id="consult_reports-page" class="page">
+            <h2>Consultar Relatórios</h2>
+            <p>Aqui você poderá visualizar e gerenciar os relatórios salvos.</p>
+            <input type="file" id="loadReportInputList" accept=".json" multiple style="display: none;">
+            <button id="loadMultipleReportsButton">Carregar Múltiplos Relatórios (JSON)</button>
+            <div id="loadedReportsList" class="report-list-container">
+                <p>Nenhum relatório carregado ainda.</p>
+            </div>
+            <button id="clearLoadedReports" style="margin-top: 10px; display: none;">Limpar Relatórios Carregados</button>
+        </section>
+        <section id="register_client-page" class="page">
+            <h2>Cadastro de Clientes</h2>
+            <form id="clientForm">
+                <div class="form-group">
+                    <label for="clientName">Nome do Cliente:</label>
+                    <input type="text" id="clientName" required>
+                </div>
+                <div class="form-group">
+                    <label for="clientContact">Contato:</label>
+                    <input type="text" id="clientContact">
+                </div>
+                <div class="form-group">
+                    <label for="clientAddress">Endereço:</label>
+                    <input type="text" id="clientAddress">
+                </div>
+                <button type="submit">Cadastrar Cliente</button>
+            </form>
+            <h3>Clientes Cadastrados:</h3>
+            <ul id="clientList"></ul>
+        </section>
+        <section id="register_technician-page" class="page">
+            <h2>Cadastro de Técnicos</h2>
+            <form id="technicianForm">
+                <div class="form-group">
+                    <label for="technicianName">Nome do Técnico:</label>
+                    <input type="text" id="technicianName" required>
+                </div>
+                <div class="form-group">
+                    <label for="technicianCrea">CREA/Registro:</label>
+                    <input type="text" id="technicianCrea">
+                </div>
+                <button type="submit">Cadastrar Técnico</button>
+            </form>
+            <h3>Técnicos Cadastrados:</h3>
+            <ul id="technicianList"></ul>
+        </section>
+        <section id="support-page" class="page">
+            <h2>Suporte</h2>
+            <p>Para dúvidas ou problemas, entre em contato com o suporte técnico da H. Bremer.</p>
+            <p>Email: <a href="mailto:suporte@hbremer.com.br">suporte@hbremer.com.br</a></p>
+            <p>Telefone: (XX) XXXX-XXXX</p>
+            <p>Horário de Atendimento: Segunda a Sexta, das 8h às 18h.</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 H. Bremer. Todos os direitos reservados.</p>
+    </footer>
+
+    <script src="js/report_form.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
