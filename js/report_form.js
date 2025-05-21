@@ -527,7 +527,7 @@ const generatePdf = async () => {
 
         // Adiciona Imagens da Seção
         if (sectionImages.length > 0) {
-            yPosition = checkNewPage(doc, yPosition, 40); // Espaço extra antes das imagens
+            yPosition = checkNewPage(doc, yPosition, 20); // Espaço para o título "Imagens da Seção"
             doc.setFontSize(12);
             doc.setFont("helvetica", "bold");
             doc.text("Imagens da Seção:", margin, yPosition);
@@ -535,41 +535,55 @@ const generatePdf = async () => {
 
             let currentX = margin;
             let currentRowY = yPosition;
-            const imgWidth = (pageWidth - (margin * 2) - 10) / 2; // Duas imagens por linha com 10px de espaçamento
-            const imgMaxHeight = 80; // Altura máxima para as imagens para controle
+            const imgAvailableWidth = pageWidth - (margin * 2);
+            const imgWidth = (imgAvailableWidth - 10) / 2; // Duas imagens por linha com 10px de espaçamento
+            const imgMaxHeight = 70; // Altura máxima para as imagens para controle
 
             for (let i = 0; i < sectionImages.length; i++) {
                 const img = sectionImages[i];
 
                 // Calcular altura da legenda
-                let captionTextLines = doc.splitTextToSize(img.caption || '', imgWidth);
-                let captionHeight = captionTextLines.length * 5; // Aproximadamente 5 unidades por linha de texto
+                doc.setFontSize(9); // Definir tamanho da fonte para a legenda antes de calcular splitTextToSize
+                const captionTextLines = doc.splitTextToSize(img.caption || '', imgWidth);
+                const captionHeight = captionTextLines.length * (doc.getLineHeight() / doc.internal.scaleFactor) + 2; // Aproximadamente 5 unidades por linha de texto + padding
 
-                // Calcular a altura proporcional da imagem se ela fosse largura total
                 let actualImgHeight = imgMaxHeight; // Altura padrão
 
                 try {
-                    const imgData = img.url; // Use img.url, não img.src
+                    const imgData = img.url;
+                    // É crucial que imgData seja um Data URL válido para getImageProperties funcionar.
+                    // Se estiver vindo de um arquivo salvo, já deve ser.
                     const imgProps = doc.getImageProperties(imgData);
                     if (imgProps) {
                         actualImgHeight = (imgWidth * imgProps.height) / imgProps.width;
                         if (actualImgHeight > imgMaxHeight) {
                             actualImgHeight = imgMaxHeight; // Limita a altura máxima
                         }
+                    } else {
+                        // Se getImageProperties falhar, provavelmente a imagem não é válida ou está corrompida.
+                        // Usar altura padrão e logar o erro.
+                        console.warn("Não foi possível obter as propriedades da imagem. A imagem pode estar corrompida ou o Data URL inválido. Usando altura padrão.", imgData.substring(0, 50) + "...");
                     }
                 } catch (e) {
-                    console.warn("Não foi possível obter as propriedades da imagem, usando altura padrão:", e);
+                    console.error("Erro ao processar imagem para obter propriedades:", e);
                 }
 
-                const totalImageBlockHeight = actualImgHeight + captionHeight + 10; // Altura da imagem + legenda + padding
+                const totalImageBlockHeight = actualImgHeight + captionHeight + 8; // Altura da imagem + legenda + padding extra
 
                 // Verificar se a imagem atual e sua legenda cabem na página, ou se precisamos de uma nova página
-                if (currentRowY + totalImageBlockHeight > pageHeight - margin) {
+                // Considera o espaço necessário para a próxima imagem inteira, se houver duas por linha.
+                let spaceNeeded = totalImageBlockHeight;
+                if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem da linha e não a última imagem total
+                    // Se houver uma segunda imagem na linha, verificar se o espaço para a próxima linha é suficiente
+                    spaceNeeded = totalImageBlockHeight * 2; // Espaço para duas imagens na linha
+                }
+
+                if (currentRowY + spaceNeeded > pageHeight - (margin + 20)) { // 20 para o rodapé
                     doc.addPage();
                     currentPageNumber++;
                     addContentPageHeaderAndFooter(doc, currentPageNumber);
-                    currentRowY = margin + 30; // Reset Y para a nova página, deixando espaço para o cabeçalho
-                    currentX = margin; // Reset X para a nova página
+                    currentRowY = margin + 20; // Reinicia Y na nova página
+                    currentX = margin; // Reinicia X na nova página
                 }
 
                 try {
@@ -587,11 +601,11 @@ const generatePdf = async () => {
                     doc.text(`Erro ao carregar imagem ${i + 1}`, currentX, currentRowY + actualImgHeight / 2);
                 }
 
-                if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem na linha e não a última
+                if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem na linha e houver outra
                     currentX += imgWidth + 10; // Prepara o X para a próxima imagem na mesma linha (com espaçamento)
                 } else { // Se for a segunda imagem na linha ou a última imagem
                     currentX = margin; // Reseta X para a próxima linha
-                    currentRowY += totalImageBlockHeight + 15; // Pula para a próxima linha de imagens com espaçamento
+                    currentRowY += totalImageBlockHeight + 10; // Pula para a próxima linha de imagens com espaçamento extra
                 }
             }
             yPosition = currentRowY; // Atualiza a posição Y geral após todas as imagens
