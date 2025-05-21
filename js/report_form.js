@@ -531,13 +531,14 @@ const generatePdf = async () => {
             doc.setFontSize(12);
             doc.setFont("helvetica", "bold");
             doc.text("Imagens da Seção:", margin, yPosition);
+            doc.setFont("helvetica", "normal"); // Resetar a fonte após o título da seção
             yPosition += 10; // Espaço após o título "Imagens da Seção"
 
             let currentX = margin;
-            let currentRowY = yPosition;
+            let currentRowY = yPosition; // Inicia a linha de imagens no yPosition atual
             const imgAvailableWidth = pageWidth - (margin * 2);
-            const imgWidth = (imgAvailableWidth - 10) / 2; // Duas imagens por linha com 10px de espaçamento
-            const imgMaxHeight = 70; // Altura máxima para as imagens para controle
+            const imgWidth = (imgAvailableWidth - 15) / 2; // Duas imagens por linha com 15px de espaçamento entre elas
+            const imgMaxHeight = 60; // Altura máxima reduzida para garantir espaço para a legenda e evitar sobreposição
 
             for (let i = 0; i < sectionImages.length; i++) {
                 const img = sectionImages[i];
@@ -545,14 +546,13 @@ const generatePdf = async () => {
                 // Calcular altura da legenda
                 doc.setFontSize(9); // Definir tamanho da fonte para a legenda antes de calcular splitTextToSize
                 const captionTextLines = doc.splitTextToSize(img.caption || '', imgWidth);
-                const captionHeight = captionTextLines.length * (doc.getLineHeight() / doc.internal.scaleFactor) + 2; // Aproximadamente 5 unidades por linha de texto + padding
+                const captionLineHeight = doc.getLineHeight() / doc.internal.scaleFactor;
+                const captionHeight = captionTextLines.length * captionLineHeight + (captionTextLines.length > 0 ? 4 : 0); // +4 para padding extra se houver legenda
 
                 let actualImgHeight = imgMaxHeight; // Altura padrão
 
                 try {
                     const imgData = img.url;
-                    // É crucial que imgData seja um Data URL válido para getImageProperties funcionar.
-                    // Se estiver vindo de um arquivo salvo, já deve ser.
                     const imgProps = doc.getImageProperties(imgData);
                     if (imgProps) {
                         actualImgHeight = (imgWidth * imgProps.height) / imgProps.width;
@@ -560,31 +560,43 @@ const generatePdf = async () => {
                             actualImgHeight = imgMaxHeight; // Limita a altura máxima
                         }
                     } else {
-                        // Se getImageProperties falhar, provavelmente a imagem não é válida ou está corrompida.
-                        // Usar altura padrão e logar o erro.
                         console.warn("Não foi possível obter as propriedades da imagem. A imagem pode estar corrompida ou o Data URL inválido. Usando altura padrão.", imgData.substring(0, 50) + "...");
                     }
                 } catch (e) {
                     console.error("Erro ao processar imagem para obter propriedades:", e);
                 }
 
-                const totalImageBlockHeight = actualImgHeight + captionHeight + 8; // Altura da imagem + legenda + padding extra
+                // Altura total que um bloco de imagem + legenda ocupará
+                const totalImageBlockHeight = actualImgHeight + captionHeight + 8; // Altura da imagem + legenda + padding extra abaixo do bloco
 
-                // Verificar se a imagem atual e sua legenda cabem na página, ou se precisamos de uma nova página
-                // Considera o espaço necessário para a próxima imagem inteira, se houver duas por linha.
-                let spaceNeeded = totalImageBlockHeight;
+                // Verificar quebra de página ANTES de desenhar a imagem
+                // Se for a primeira imagem da linha E houver uma segunda imagem para ir na mesma linha,
+                // precisamos verificar se ambas caberão. Caso contrário, verifica apenas a imagem atual.
+                let spaceNeededForCurrentBlock = totalImageBlockHeight;
                 if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem da linha e não a última imagem total
-                    // Se houver uma segunda imagem na linha, verificar se o espaço para a próxima linha é suficiente
-                    spaceNeeded = totalImageBlockHeight * 2; // Espaço para duas imagens na linha
+                    // Calcula a altura da próxima imagem e legenda para verificar se cabem na mesma linha
+                    const nextImg = sectionImages[i + 1];
+                    const nextCaptionTextLines = doc.splitTextToSize(nextImg.caption || '', imgWidth);
+                    const nextCaptionHeight = nextCaptionTextLines.length * captionLineHeight + (nextCaptionTextLines.length > 0 ? 4 : 0);
+
+                    let nextActualImgHeight = imgMaxHeight;
+                    try {
+                        const nextImgProps = doc.getImageProperties(nextImg.url);
+                        if (nextImgProps) {
+                            nextActualImgHeight = (imgWidth * nextImgProps.height) / nextImgProps.width;
+                            if (nextActualImgHeight > imgMaxHeight) {
+                                nextActualImgHeight = imgMaxHeight;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Erro ao obter propriedades da próxima imagem.", e);
+                    }
+                    const nextTotalImageBlockHeight = nextActualImgHeight + nextCaptionHeight + 8;
+                    spaceNeededForCurrentBlock = Math.max(totalImageBlockHeight, nextTotalImageBlockHeight);
                 }
 
-                if (currentRowY + spaceNeeded > pageHeight - (margin + 20)) { // 20 para o rodapé
-                    doc.addPage();
-                    currentPageNumber++;
-                    addContentPageHeaderAndFooter(doc, currentPageNumber);
-                    currentRowY = margin + 20; // Reinicia Y na nova página
-                    currentX = margin; // Reinicia X na nova página
-                }
+
+                currentRowY = checkNewPage(doc, currentRowY, spaceNeededForCurrentBlock + 10); // +10 para espaçamento antes da primeira imagem da linha na nova página
 
                 try {
                     doc.addImage(img.url, 'JPEG', currentX, currentRowY, imgWidth, actualImgHeight, undefined, 'FAST'); // Adiciona a imagem
@@ -592,6 +604,7 @@ const generatePdf = async () => {
                         // Adiciona a legenda centralizada sob a imagem
                         doc.setFontSize(9);
                         doc.setFont("helvetica", "normal");
+                        // O Y da legenda é a base da imagem + sua altura real + um pequeno offset
                         doc.text(captionTextLines, currentX + imgWidth / 2, currentRowY + actualImgHeight + 4, { align: 'center' });
                     }
                 } catch (error) {
@@ -601,14 +614,15 @@ const generatePdf = async () => {
                     doc.text(`Erro ao carregar imagem ${i + 1}`, currentX, currentRowY + actualImgHeight / 2);
                 }
 
-                if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem na linha e houver outra
-                    currentX += imgWidth + 10; // Prepara o X para a próxima imagem na mesma linha (com espaçamento)
-                } else { // Se for a segunda imagem na linha ou a última imagem
-                    currentX = margin; // Reseta X para a próxima linha
+                if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem na linha E houver uma próxima
+                    currentX += imgWidth + 15; // Prepara o X para a próxima imagem na mesma linha (com espaçamento)
+                    // Não atualiza currentRowY ainda, pois a próxima imagem está na mesma linha
+                } else { // Se for a segunda imagem na linha OU a última imagem da seção
+                    currentX = margin; // Reseta X para a próxima linha ou para a próxima seção
                     currentRowY += totalImageBlockHeight + 10; // Pula para a próxima linha de imagens com espaçamento extra
                 }
             }
-            yPosition = currentRowY; // Atualiza a posição Y geral após todas as imagens
+            yPosition = currentRowY; // Atualiza a posição Y geral após todas as imagens desta seção
         }
 
         yPosition += 15; // Espaço entre as seções
