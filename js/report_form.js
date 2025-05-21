@@ -1,19 +1,52 @@
-// report_form.js corrigido
-
 window.initializeReportForm = initializeReportForm;
 window.loadReportDataIntoForm = loadReportDataIntoForm;
 
-// (restante do código permanece igual exceto a parte das imagens no generatePdf)
-
 const generatePdf = async () => {
-    // (código omitido para brevidade)
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPosition = margin + 20;
+    let currentPageNumber = 1;
+
+    const contentGroups = document.querySelectorAll('.content-group');
+
+    const addContentPageHeaderAndFooter = (doc, pageNum) => {
+        doc.setFontSize(10);
+        doc.text(`Página ${pageNum}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    };
+
+    addContentPageHeaderAndFooter(doc, currentPageNumber);
 
     for (const group of contentGroups) {
-        // (código omitido)
+        const title = group.querySelector('.report-title').value.trim();
+        const content = group.querySelector('.report-content').value.trim();
+        const imageWrappers = group.querySelectorAll('.image-preview-and-caption');
 
-        // IMAGENS:
+        const sectionImages = [];
+
+        imageWrappers.forEach(wrapper => {
+            const img = wrapper.querySelector('img');
+            const caption = wrapper.querySelector('.image-caption');
+            if (img && img.src && caption) {
+                sectionImages.push({
+                    url: img.src,
+                    caption: caption.value.trim()
+                });
+            }
+        });
+
+        doc.setFontSize(14);
+        doc.text(title, margin, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(11);
+        const lines = doc.splitTextToSize(content, pageWidth - margin * 2);
+        doc.text(lines, margin, yPosition);
+        yPosition += lines.length * 6;
+
         if (sectionImages.length > 0) {
-            yPosition = checkNewPage(doc, yPosition, 20);
+            yPosition += 5;
             doc.setFontSize(12);
             doc.text("Imagens da Seção:", margin, yPosition);
             yPosition += 10;
@@ -92,9 +125,13 @@ const generatePdf = async () => {
         }
 
         yPosition += 15;
-        yPosition = checkNewPage(doc, yPosition, 10);
+        if (yPosition > pageHeight - margin - 20) {
+            doc.addPage();
+            currentPageNumber++;
+            addContentPageHeaderAndFooter(doc, currentPageNumber);
+            yPosition = margin + 20;
+        }
     }
 
-    doc.autoPrint();
     window.open(doc.output('bloburl'), '_blank');
 };
