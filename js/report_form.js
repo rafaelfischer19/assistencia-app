@@ -1,7 +1,11 @@
+// report_form.js FINAL - corrigido
+
+// Expondo funções no escopo global
 window.initializeReportForm = initializeReportForm;
 window.loadReportDataIntoForm = loadReportDataIntoForm;
 
-const generatePdf = async () => {
+// Função para gerar o PDF com imagens e legendas organizadas
+async function generatePdf() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -134,4 +138,4 @@ const generatePdf = async () => {
     }
 
     window.open(doc.output('bloburl'), '_blank');
-};
+}
