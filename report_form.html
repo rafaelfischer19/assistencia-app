@@ -1,68 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gerador de Relatório</title>
+</head>
+<body>
+
 <div id="formClienteTecnico">
-    <h1>Gerador de Relatório</h1>
+  <h1>Gerador de Relatório</h1>
 
-    <div class="form-row">
-        <div class="form-group">
-            <label for="cliente">Cliente:</label>
-            <select id="cliente" name="cliente" required>
-                <option value="">Selecione um cliente</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="tecnico">Técnico:</label>
-            <select id="tecnico" name="tecnico" required>
-                <option value="">Selecione um técnico</option>
-            </select>
-        </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="cliente">Cliente:</label>
+      <select id="cliente" name="cliente" required>
+        <option value="">Selecione um cliente</option>
+      </select>
     </div>
-
-    <div class="form-row">
-        <div class="form-group">
-            <label for="data">Data:</label>
-            <input type="date" id="data" name="data" required>
-        </div>
-        <div class="form-group">
-            <label for="local">Local:</label>
-            <input type="text" id="local" name="local" value="Rio do Sul - SC" required>
-        </div>
+    <div class="form-group">
+      <label for="tecnico">Técnico:</label>
+      <select id="tecnico" name="tecnico" required>
+        <option value="">Selecione um técnico</option>
+      </select>
     </div>
+  </div>
 
-    <hr>
-
-    <h2>Conteúdo do Relatório por Seção</h2>
-    <div id="reportContentContainer">
-        <!-- As seções serão adicionadas aqui dinamicamente -->
-        <!-- Exemplo de estrutura para cada seção adicionada via JS: -->
-        <!--
-        <div class="report-section">
-            <h3>1. Objetivo</h3>
-            <p>Texto da seção...</p>
-
-            <div class="image-section">
-                <h4>Imagens da Seção:</h4>
-                <div class="image-grid">
-                    <figure>
-                        <img src="data:image/png;base64,..." alt="Imagem 1">
-                        <figcaption>Legenda da imagem 1</figcaption>
-                    </figure>
-                    <figure>
-                        <img src="data:image/png;base64,..." alt="Imagem 2">
-                        <figcaption>Legenda da imagem 2</figcaption>
-                    </figure>
-                </div>
-            </div>
-        </div>
-        -->
+  <div class="form-row">
+    <div class="form-group">
+      <label for="data">Data:</label>
+      <input type="date" id="data" name="data" required>
     </div>
-
-    <button id="addSection">Adicionar Nova Seção Personalizada</button>
-
-    <hr>
-
-    <div class="form-actions">
-        <button id="saveReport">Salvar Relatório</button>
-        <input type="file" id="loadReportInput" accept=".json" style="display: none;">
-        <button id="loadReportButton">Carregar Relatório</button>
-        <button id="generatePdf">Gerar PDF</button>
+    <div class="form-group">
+      <label for="local">Local:</label>
+      <input type="text" id="local" name="local" value="Rio do Sul - SC" required>
     </div>
+  </div>
+
+  <hr>
+
+  <h2>Conteúdo do Relatório por Seção</h2>
+  <div id="reportContentContainer">
+    <!-- Seções dinâmicas aqui -->
+  </div>
+
+  <button id="addSection">Adicionar Nova Seção Personalizada</button>
+
+  <hr>
+
+  <div class="form-actions">
+    <button id="saveReport">Salvar Relatório</button>
+    <input type="file" id="loadReportInput" accept=".json" style="display: none;">
+    <button id="loadReportButton">Carregar Relatório</button>
+    <button id="generatePdf">Gerar PDF</button>
+  </div>
 </div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_PROJETO.firebaseapp.com",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_PROJETO.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SUA_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  document.getElementById("saveReport").addEventListener("click", async () => {
+    const cliente = document.getElementById("cliente").value;
+    const tecnico = document.getElementById("tecnico").value;
+    const data = document.getElementById("data").value;
+    const local = document.getElementById("local").value;
+
+    const relatorio = {
+      cliente,
+      tecnico,
+      data,
+      local,
+      criadoEm: new Date().toISOString()
+    };
+
+    try {
+      await addDoc(collection(db, "relatorios"), relatorio);
+      alert("Relatório salvo no Firebase!");
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar relatório.");
+    }
+  });
+</script>
+
+</body>
+</html>
