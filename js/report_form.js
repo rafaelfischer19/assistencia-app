@@ -167,7 +167,7 @@ const addNewSection = (title = null, content = '', images = []) => {
     newContentGroup.dataset.sectionId = currentSectionCounter; // Atribui um ID único à seção
 
     const sectionTitleHtml = title !== null ? `<input type="text" id="campoTitulo-${currentSectionCounter}" class="report-title" value="${title}" readonly>` :
-                                            `<input type="text" id="campoTitulo-${currentSectionCounter}" class="report-title" placeholder="Digite o título da seção...">`;
+                                           `<input type="text" id="campoTitulo-${currentSectionCounter}" class="report-title" placeholder="Digite o título da seção...">`;
 
     newContentGroup.innerHTML = `
         <div class="form-group">
@@ -427,7 +427,7 @@ const generatePdf = async () => {
     const tecnico = document.getElementById('tecnico')?.value || '';
     const data = document.getElementById('data')?.value || '';
     const local = document.getElementById('local')?.value || '';
-    const companyAddress = "Rua Lilly Bremer, 322 Bairro Navegantes- Fone 47-3531-9000 Fax 47- 3525-1975 e-mail: assistencia@bremer.com.br  CEP 89160-000- Rio do Sul-SC";
+    const companyAddress = "Rua Lilly Bremer, 322 Bairro Navegantes- Fone 47-3531-9000 Fax 47- 3525-1975 e-mail: assistencia@bremer.com.br CEP 89160-000- Rio do Sul-SC";
 
     // --- Página de Rosto ---
     doc.setFontSize(24);
@@ -527,59 +527,71 @@ const generatePdf = async () => {
 
         // Adiciona Imagens da Seção
         if (sectionImages.length > 0) {
-            yPosition = checkNewPage(doc, yPosition, 20); // Espaço para o título "Imagens da Seção"
+            yPosition = checkNewPage(doc, yPosition, 40); // Espaço extra antes das imagens
             doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
             doc.text("Imagens da Seção:", margin, yPosition);
-            yPosition += 10;
-
-            const imgWidth = (pageWidth - (margin * 2) - 10) / 2; // Duas imagens por linha com 10px de gap
-            const imgHeight = 60; // Altura fixa para as imagens
-            const captionLineHeight = 4;
-            const maxCaptionLines = 3;
-            const estimatedCaptionHeight = captionLineHeight * maxCaptionLines;
-            const totalImageBlockHeight = imgHeight + estimatedCaptionHeight + 10; // Altura total de um bloco de imagem (imagem + legenda + espaçamento)
+            yPosition += 10; // Espaço após o título "Imagens da Seção"
 
             let currentX = margin;
             let currentRowY = yPosition;
+            const imgWidth = (pageWidth - (margin * 2) - 10) / 2; // Duas imagens por linha com 10px de espaçamento
+            const imgMaxHeight = 80; // Altura máxima para as imagens para controle
 
             for (let i = 0; i < sectionImages.length; i++) {
                 const img = sectionImages[i];
 
-                // Verifica se a próxima imagem ultrapassaria a largura da página, então vai para a próxima linha
-                if (currentX + imgWidth > pageWidth - margin && i % 2 === 0) {
-                    currentX = margin;
-                    currentRowY += totalImageBlockHeight; // Pula para a próxima "linha" de imagens
-                } else if (i % 2 !== 0) { // Se for a segunda imagem na linha, ajusta X para a próxima linha
-                    currentX += imgWidth + 10; // Adiciona o gap para a próxima imagem
+                // Calcular altura da legenda
+                let captionTextLines = doc.splitTextToSize(img.caption || '', imgWidth);
+                let captionHeight = captionTextLines.length * 5; // Aproximadamente 5 unidades por linha de texto
+
+                // Calcular a altura proporcional da imagem se ela fosse largura total
+                let actualImgHeight = imgMaxHeight; // Altura padrão
+
+                try {
+                    const imgData = img.url; // Use img.url, não img.src
+                    const imgProps = doc.getImageProperties(imgData);
+                    if (imgProps) {
+                        actualImgHeight = (imgWidth * imgProps.height) / imgProps.width;
+                        if (actualImgHeight > imgMaxHeight) {
+                            actualImgHeight = imgMaxHeight; // Limita a altura máxima
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Não foi possível obter as propriedades da imagem, usando altura padrão:", e);
                 }
 
+                const totalImageBlockHeight = actualImgHeight + captionHeight + 10; // Altura da imagem + legenda + padding
 
-                // Verifica se precisa de uma nova página antes de desenhar a imagem e sua legenda
-                if (currentRowY + totalImageBlockHeight > pageHeight - (margin + 20)) {
+                // Verificar se a imagem atual e sua legenda cabem na página, ou se precisamos de uma nova página
+                if (currentRowY + totalImageBlockHeight > pageHeight - margin) {
                     doc.addPage();
                     currentPageNumber++;
                     addContentPageHeaderAndFooter(doc, currentPageNumber);
-                    currentRowY = margin + 20; // Reinicia Y na nova página
-                    currentX = margin; // Reinicia X na nova página
+                    currentRowY = margin + 30; // Reset Y para a nova página, deixando espaço para o cabeçalho
+                    currentX = margin; // Reset X para a nova página
                 }
 
                 try {
-                    doc.addImage(img.url, 'JPEG', currentX, currentRowY, imgWidth, imgHeight);
+                    doc.addImage(img.url, 'JPEG', currentX, currentRowY, imgWidth, actualImgHeight, undefined, 'FAST'); // Adiciona a imagem
                     if (img.caption) {
-                        doc.setFontSize(8);
-                        const captionTextLines = doc.splitTextToSize(img.caption, imgWidth);
-                        doc.text(captionTextLines, currentX + imgWidth / 2, currentRowY + imgHeight + 4, { align: 'center' });
+                        // Adiciona a legenda centralizada sob a imagem
+                        doc.setFontSize(9);
+                        doc.setFont("helvetica", "normal");
+                        doc.text(captionTextLines, currentX + imgWidth / 2, currentRowY + actualImgHeight + 4, { align: 'center' });
                     }
                 } catch (error) {
                     console.error("Erro ao adicionar imagem ou legenda ao PDF:", error);
-                    doc.text(`Erro ao carregar imagem ${i + 1}`, currentX, currentRowY + imgHeight / 2);
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(`Erro ao carregar imagem ${i + 1}`, currentX, currentRowY + actualImgHeight / 2);
                 }
 
-                if (i % 2 === 0) { // Se for a primeira imagem na linha
-                     currentX += imgWidth + 10; // Prepara o X para a próxima imagem na mesma linha
-                } else { // Se for a segunda imagem na linha
+                if (i % 2 === 0 && i < sectionImages.length - 1) { // Se for a primeira imagem na linha e não a última
+                    currentX += imgWidth + 10; // Prepara o X para a próxima imagem na mesma linha (com espaçamento)
+                } else { // Se for a segunda imagem na linha ou a última imagem
                     currentX = margin; // Reseta X para a próxima linha
-                    currentRowY += totalImageBlockHeight; // Pula para a próxima linha de imagens
+                    currentRowY += totalImageBlockHeight + 15; // Pula para a próxima linha de imagens com espaçamento
                 }
             }
             yPosition = currentRowY; // Atualiza a posição Y geral após todas as imagens
